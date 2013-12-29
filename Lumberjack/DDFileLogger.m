@@ -15,9 +15,6 @@
  * https://github.com/CocoaLumberjack/CocoaLumberjack/wiki/GettingStarted
 **/
 
-#if ! __has_feature(objc_arc)
-#warning This file must be compiled with ARC. Use -fobjc-arc flag (or convert project to ARC).
-#endif
 
 // We probably shouldn't be using DDLog() statements within the DDLog implementation.
 // But we still want to leave our log statements for any future debugging,
@@ -96,6 +93,8 @@ BOOL doesAppRunInBackground(void);
     @catch (NSException *exception) {
         
     }
+    [_logsDirectory release];
+    [super dealloc];
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -282,7 +281,7 @@ BOOL doesAppRunInBackground(void);
 
 - (NSDateFormatter *)logFileDateFormatter
 {
-    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    NSDateFormatter *dateFormatter = [[[NSDateFormatter alloc] init] autorelease];
     [dateFormatter setDateFormat:@"yyyy'-'MM'-'dd' 'HH'-'mm'"];
     [dateFormatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
 
@@ -346,7 +345,7 @@ BOOL doesAppRunInBackground(void);
     
     for (NSString *filePath in unsortedLogFilePaths)
     {
-        DDLogFileInfo *logFileInfo = [[DDLogFileInfo alloc] initWithFilePath:filePath];
+        DDLogFileInfo *logFileInfo = [[[DDLogFileInfo alloc] initWithFilePath:filePath] autorelease];
         
         [unsortedLogFileInfos addObject:logFileInfo];
     }
@@ -552,19 +551,19 @@ BOOL doesAppRunInBackground(void);
 
 - (id)init
 {
-    DDLogFileManagerDefault *defaultLogFileManager = [[DDLogFileManagerDefault alloc] init];
+    DDLogFileManagerDefault *defaultLogFileManager = [[[DDLogFileManagerDefault alloc] init] autorelease];
     
     return [self initWithLogFileManager:defaultLogFileManager];
 }
 
-- (instancetype)initWithLogFileManager:(id <DDLogFileManager>)aLogFileManager
+- (instancetype) initWithLogFileManager:(id <DDLogFileManager>)aLogFileManager
 {
     if ((self = [super init]))
     {
         maximumFileSize = DEFAULT_LOG_MAX_FILE_SIZE;
         rollingFrequency = DEFAULT_LOG_ROLLING_FREQUENCY;
         
-        logFileManager = aLogFileManager;
+        logFileManager = [aLogFileManager retain];
         
         formatter = [[DDLogFileFormatterDefault alloc] init];
     }
@@ -586,6 +585,9 @@ BOOL doesAppRunInBackground(void);
         dispatch_source_cancel(rollingTimer);
         rollingTimer = NULL;
     }
+
+   [logFileManager release];
+   [super dealloc];
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -935,7 +937,7 @@ BOOL doesAppRunInBackground(void);
             {
                 NSLogVerbose(@"DDFileLogger: Resuming logging with file %@", mostRecentLogFileInfo.fileName);
                 
-                currentLogFileInfo = mostRecentLogFileInfo;
+                currentLogFileInfo = [mostRecentLogFileInfo retain];
             }
             else
             {
@@ -968,7 +970,7 @@ BOOL doesAppRunInBackground(void);
     {
         NSString *logFilePath = [[self currentLogFileInfo] filePath];
         
-        currentLogFileHandle = [NSFileHandle fileHandleForWritingAtPath:logFilePath];
+        currentLogFileHandle = [[NSFileHandle fileHandleForWritingAtPath:logFilePath] retain];
         [currentLogFileHandle seekToEndOfFile];
         
         if (currentLogFileHandle)
@@ -1084,7 +1086,7 @@ static int exception_count = 0;
 
 + (instancetype)logFileWithPath:(NSString *)aFilePath
 {
-    return [[self alloc] initWithFilePath:aFilePath];
+    return [[[self alloc] initWithFilePath:aFilePath] autorelease];
 }
 
 - (instancetype)initWithFilePath:(NSString *)aFilePath

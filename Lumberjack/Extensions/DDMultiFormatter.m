@@ -53,11 +53,12 @@
     return self;
 }
 
-#if NEEDS_DISPATCH_RETAIN_RELEASE
 - (void)dealloc {
     dispatch_release(_queue);
+
+   [_formatters release];
+   [super dealloc];
 }
-#endif
 
 #pragma mark Processing
 
@@ -79,7 +80,7 @@
 }
 
 - (DDLogMessage *)logMessageForLine:(NSString *)line originalMessage:(DDLogMessage *)message {
-    DDLogMessage *newMessage = [message copy];
+    DDLogMessage *newMessage = [[message copy] autorelease];
     newMessage->logMsg = line;
     return newMessage;
 }
@@ -90,7 +91,7 @@
     __block NSArray *formatters;
     
     dispatch_sync(_queue, ^{
-        formatters = [_formatters copy];
+        formatters = [[_formatters copy] autorelease];
     });
     
     return formatters;

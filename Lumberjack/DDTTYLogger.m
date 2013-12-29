@@ -13,9 +13,6 @@
  * https://github.com/CocoaLumberjack/CocoaLumberjack/wiki/GettingStarted
 **/
 
-#if ! __has_feature(objc_arc)
-#warning This file must be compiled with ARC. Use -fobjc-arc flag (or convert project to ARC).
-#endif
 
 // We probably shouldn't be using DDLog() statements within the DDLog implementation.
 // But we still want to leave our log statements for any future debugging,
@@ -825,7 +822,7 @@ static DDTTYLogger *sharedInstance;
     
     if ((self = [super init]))
     {
-        calendar = [NSCalendar autoupdatingCurrentCalendar];
+        calendar = [[NSCalendar autoupdatingCurrentCalendar] retain];
         
         calendarUnitFlags = 0;
         calendarUnitFlags |= NSYearCalendarUnit;
@@ -837,7 +834,7 @@ static DDTTYLogger *sharedInstance;
         
         // Initialze 'app' variable (char *)
         
-        appName = [[NSProcessInfo processInfo] processName];
+        appName = [[[NSProcessInfo processInfo] processName] copy];
         
         appLen = [appName lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
         app = (char *)malloc(appLen + 1);
@@ -847,7 +844,7 @@ static DDTTYLogger *sharedInstance;
         
         // Initialize 'pid' variable (char *)
         
-        processID = [NSString stringWithFormat:@"%i", (int)getpid()];
+        processID = [[NSString alloc] initWithFormat:@"%i", (int)getpid()];
         
         pidLen = [processID lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
         pid = (char *)malloc(pidLen + 1);
@@ -864,6 +861,19 @@ static DDTTYLogger *sharedInstance;
     }
     return self;
 }
+
+
+- (void) dealloc
+{
+   [colorProfilesArray release];
+   [colorProfilesDict release];
+   [processID release];
+   [appName release];
+   [calendar release];
+
+   [super dealloc];
+}
+
 
 - (void)loadDefaultColorProfiles
 {
@@ -940,10 +950,10 @@ static DDTTYLogger *sharedInstance;
     dispatch_block_t block = ^{ @autoreleasepool {
         
         DDTTYLoggerColorProfile *newColorProfile =
-            [[DDTTYLoggerColorProfile alloc] initWithForegroundColor:txtColor
+            [[[DDTTYLoggerColorProfile alloc] initWithForegroundColor:txtColor
                                                      backgroundColor:bgColor
                                                                 flag:mask
-                                                             context:ctxt];
+                                                             context:ctxt] autorelease];
         
         NSLogInfo(@"DDTTYLogger: newColorProfile: %@", newColorProfile);
         
@@ -989,10 +999,10 @@ static DDTTYLogger *sharedInstance;
     dispatch_block_t block = ^{ @autoreleasepool {
         
         DDTTYLoggerColorProfile *newColorProfile =
-            [[DDTTYLoggerColorProfile alloc] initWithForegroundColor:txtColor
+            [[[DDTTYLoggerColorProfile alloc] initWithForegroundColor:txtColor
                                                      backgroundColor:bgColor
                                                                 flag:0
-                                                             context:0];
+                                                             context:0] autorelease];
         
         NSLogInfo(@"DDTTYLogger: newColorProfile: %@", newColorProfile);
         

@@ -11,10 +11,6 @@
  * https://github.com/CocoaLumberjack/CocoaLumberjack/wiki/GettingStarted
 **/
 
-#if ! __has_feature(objc_arc)
-#warning This file must be compiled with ARC. Use -fobjc-arc flag (or convert project to ARC).
-#endif
-
 
 @implementation DDDispatchQueueLogFormatter
 {
@@ -32,8 +28,7 @@
 {
     if ((self = [super init]))
     {
-        dateFormatString = @"yyyy-MM-dd HH:mm:ss:SSS";
-        
+       
         atomicLoggerCount = 0;
         threadUnsafeDateFormatter = nil;
         
@@ -48,6 +43,12 @@
     return self;
 }
 
+
+- (void) dealloc
+{
+   [_replacements release];
+   [super dealloc];
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark Configuration
@@ -84,9 +85,33 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark DDLogFormatter
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+static NSDateFormatter NS_RETURNS_RETAINED  *newDDDateFormatter( NSString *formatString)
+{
+   NSDateFormatter *dateFormatter;
+   NSCalendar      *calendar;
+   
+   dateFormatter = [NSDateFormatter new];
+   [dateFormatter setFormatterBehavior:NSDateFormatterBehavior10_4];
+   [dateFormatter setDateFormat:formatString];
+
+   // why gregorian ?
+   calendar = [[NSCalendar alloc] initWithCalendarIdentifier:NSGregorianCalendar];
+   [dateFormatter setCalendar:calendar];
+   [calendar release];
+   
+   return( dateFormatter);
+}
+
++ (NSString *) dateFormatString
+{
+   return( @"yyyy-MM-dd HH:mm:ss:SSS");
+}
+
 
 - (NSString *)stringFromDate:(NSDate *)date
 {
+   NSDateFormatter *dateFormatter;
+   
     int32_t loggerCount = OSAtomicAdd32(0, &atomicLoggerCount);
     
     if (loggerCount <= 1)
@@ -94,38 +119,30 @@
         // Single-threaded mode.
         
         if (threadUnsafeDateFormatter == nil)
-        {
-            threadUnsafeDateFormatter = [[NSDateFormatter alloc] init];
-            [threadUnsafeDateFormatter setFormatterBehavior:NSDateFormatterBehavior10_4];
-            [threadUnsafeDateFormatter setDateFormat:dateFormatString];
-        }
-        
-        [threadUnsafeDateFormatter setCalendar:[[NSCalendar alloc] initWithCalendarIdentifier:NSGregorianCalendar]];
-        return [threadUnsafeDateFormatter stringFromDate:date];
+           threadUnsafeDateFormatter = newDDDateFormatter( [isa dateFormatString]);
+       dateFormatter = threadUnsafeDateFormatter;
     }
     else
     {
         // Multi-threaded mode.
         // NSDateFormatter is NOT thread-safe.
         
-        NSString *key = @"DispatchQueueLogFormatter_NSDateFormatter";
+        static NSString *key = @"DispatchQueueLogFormatter_NSDateFormatter";
         
         NSMutableDictionary *threadDictionary = [[NSThread currentThread] threadDictionary];
-        NSDateFormatter *dateFormatter = threadDictionary[key];
-        
+
+        dateFormatter = threadDictionary[ key];
         if (dateFormatter == nil)
         {
-            dateFormatter = [[NSDateFormatter alloc] init];
-            [dateFormatter setFormatterBehavior:NSDateFormatterBehavior10_4];
-            [dateFormatter setDateFormat:dateFormatString];
-            
+            dateFormatter = newDDDateFormatter( [isa dateFormatString]);
             threadDictionary[key] = dateFormatter;
+            [dateFormatter autorelease];
         }
-        
-        [dateFormatter setCalendar:[[NSCalendar alloc] initWithCalendarIdentifier:NSGregorianCalendar]];
-        return [dateFormatter stringFromDate:date];
     }
+   
+   return [dateFormatter stringFromDate:date];
 }
+
 
 - (NSString *)queueThreadLabelForLogMessage:(DDLogMessage *)logMessage
 {

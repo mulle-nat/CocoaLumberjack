@@ -21,9 +21,6 @@
  * 
 **/
 
-#if ! __has_feature(objc_arc)
-#warning This file must be compiled with ARC. Use -fobjc-arc flag (or convert project to ARC).
-#endif
 
 // We probably shouldn't be using DDLog() statements within the DDLog implementation.
 // But we still want to leave our log statements for any future debugging,
@@ -307,8 +304,8 @@ static unsigned int numProcessors;
     {
         va_start(args, format);
         
-        NSString *logMsg = [[NSString alloc] initWithFormat:format arguments:args];
-        DDLogMessage *logMessage = [[DDLogMessage alloc] initWithLogMsg:logMsg
+        NSString *logMsg = [[[NSString alloc] initWithFormat:format arguments:args] autorelease];
+        DDLogMessage *logMessage = [[[DDLogMessage alloc] initWithLogMsg:logMsg
                                                                   level:level
                                                                    flag:flag
                                                                 context:context
@@ -316,7 +313,7 @@ static unsigned int numProcessors;
                                                                function:function
                                                                    line:line
                                                                     tag:tag
-                                                                options:0];
+                                                                options:0] autorelease];
         
         [self queueLogMessage:logMessage asynchronously:asynchronous];
         
@@ -337,8 +334,8 @@ static unsigned int numProcessors;
 {
     if (format)
     {
-        NSString *logMsg = [[NSString alloc] initWithFormat:format arguments:args];
-        DDLogMessage *logMessage = [[DDLogMessage alloc] initWithLogMsg:logMsg
+        NSString *logMsg = [[[NSString alloc] initWithFormat:format arguments:args] autorelease];
+        DDLogMessage *logMessage = [[[DDLogMessage alloc] initWithLogMsg:logMsg
                                                                   level:level
                                                                    flag:flag
                                                                 context:context
@@ -346,7 +343,7 @@ static unsigned int numProcessors;
                                                                function:function
                                                                    line:line
                                                                     tag:tag
-                                                                options:0];
+                                                                options:0] autorelease];
         
         [self queueLogMessage:logMessage asynchronously:asynchronous];
     }
@@ -652,7 +649,7 @@ static unsigned int numProcessors;
         {
             // skip the loggers that shouldn't write this message based on the logLevel
 
-            if (logMessage->logFlag > loggerNode.logLevel)
+            if (! (logMessage->logFlag & loggerNode.logLevel))
                 continue;
 
             dispatch_group_async(loggingGroup, loggerNode->loggerQueue, ^{ @autoreleasepool {
@@ -672,7 +669,7 @@ static unsigned int numProcessors;
         {
             // skip the loggers that shouldn't write this message based on the logLevel
             
-            if (logMessage->logFlag > loggerNode.logLevel)
+           if (! (logMessage->logFlag & loggerNode.logLevel))
                 continue;
 
             dispatch_sync(loggerNode->loggerQueue, ^{ @autoreleasepool {
@@ -784,9 +781,9 @@ NSString *DDExtractFileNameWithoutExtension(const char *filePath, BOOL copy)
     
     if (copy)
     {
-        return [[NSString alloc] initWithBytes:subStr
+        return [[[NSString alloc] initWithBytes:subStr
                                         length:subLen
-                                      encoding:NSUTF8StringEncoding];
+                                      encoding:NSUTF8StringEncoding] autorelease];
     }
     else
     {
@@ -794,10 +791,10 @@ NSString *DDExtractFileNameWithoutExtension(const char *filePath, BOOL copy)
         // Specifically, we don't need to waste time copying the string.
         // We can just tell NSString to point to a range within the string literal.
         
-        return [[NSString alloc] initWithBytesNoCopy:subStr
+        return [[[NSString alloc] initWithBytesNoCopy:subStr
                                               length:subLen
                                             encoding:NSUTF8StringEncoding
-                                        freeWhenDone:NO];
+                                        freeWhenDone:NO] autorelease];
     }
 }
 
@@ -815,7 +812,7 @@ NSString *DDExtractFileNameWithoutExtension(const char *filePath, BOOL copy)
 {
     if ((self = [super init]))
     {
-        logger = aLogger;
+        logger = [aLogger retain];
         
         if (aLoggerQueue) {
             loggerQueue = aLoggerQueue;
@@ -830,7 +827,7 @@ NSString *DDExtractFileNameWithoutExtension(const char *filePath, BOOL copy)
 
 + (DDLoggerNode *)nodeWithLogger:(id <DDLogger>)logger loggerQueue:(dispatch_queue_t)loggerQueue logLevel:(int)logLevel
 {
-    return [[DDLoggerNode alloc] initWithLogger:logger loggerQueue:loggerQueue logLevel:logLevel];
+    return [[[DDLoggerNode alloc] initWithLogger:logger loggerQueue:loggerQueue logLevel:logLevel] autorelease];
 }
 
 - (void)dealloc
@@ -838,6 +835,8 @@ NSString *DDExtractFileNameWithoutExtension(const char *filePath, BOOL copy)
     #if !OS_OBJECT_USE_OBJC
     if (loggerQueue) dispatch_release(loggerQueue);
     #endif
+   [logger release];
+   [super dealloc];
 }
 
 @end
@@ -873,7 +872,7 @@ static char *dd_str_copy(const char *str)
 {
     if ((self = [super init]))
     {
-        logMsg     = msg;
+        logMsg     = [msg copy];
         logLevel   = level;
         logFlag    = flag;
         logContext = context;
@@ -949,7 +948,7 @@ static char *dd_str_copy(const char *str)
 
 - (NSString *)threadID
 {
-    return [[NSString alloc] initWithFormat:@"%x", machThreadID];
+    return [[[NSString alloc] initWithFormat:@"%x", machThreadID] autorelease];
 }
 
 - (NSString *)fileName
@@ -962,7 +961,7 @@ static char *dd_str_copy(const char *str)
     if (function == NULL)
         return nil;
     else
-        return [[NSString alloc] initWithUTF8String:function];
+        return [[[NSString alloc] initWithUTF8String:function] autorelease];
 }
 
 - (void)dealloc
@@ -975,6 +974,8 @@ static char *dd_str_copy(const char *str)
     
     if (queueLabel)
         free(queueLabel);
+   [logMsg release];
+   [super dealloc];
 }
 
 
@@ -1019,13 +1020,14 @@ static char *dd_str_copy(const char *str)
     if ((self = [super init]))
     {
         const char *loggerQueueName = NULL;
+
         if ([self respondsToSelector:@selector(loggerName)])
         {
             loggerQueueName = [[self loggerName] UTF8String];
         }
         
-        loggerQueue = dispatch_queue_create(loggerQueueName, NULL);
-        
+        loggerQueue  = dispatch_queue_create(loggerQueueName, NULL);
+       
         // We're going to use dispatch_queue_set_specific() to "mark" our loggerQueue.
         // Later we can use dispatch_get_specific() to determine if we're executing on our loggerQueue.
         // The documentation states:
@@ -1050,15 +1052,20 @@ static char *dd_str_copy(const char *str)
 
 - (void)dealloc
 {
+#if DEBUG
+   abort();
+#endif
     #if !OS_OBJECT_USE_OBJC
     if (loggerQueue) dispatch_release(loggerQueue);
     #endif
+   [super dealloc];
 }
 
-- (void)logMessage:(DDLogMessage *)logMessage
+
+- (void) logMessage:(DDLogMessage *)logMessage
 {
-    // Override me
 }
+
 
 - (id <DDLogFormatter>)logFormatter
 {
@@ -1157,15 +1164,18 @@ static char *dd_str_copy(const char *str)
     });
 }
 
+
 - (dispatch_queue_t)loggerQueue
 {
     return loggerQueue;
 }
 
-- (NSString *)loggerName
+
+- (NSString *) loggerName
 {
     return NSStringFromClass([self class]);
 }
+
 
 - (BOOL)isOnGlobalLoggingQueue
 {

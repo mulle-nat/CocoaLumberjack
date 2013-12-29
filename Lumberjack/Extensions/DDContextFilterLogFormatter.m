@@ -11,9 +11,6 @@
  * https://github.com/CocoaLumberjack/CocoaLumberjack/wiki/GettingStarted
 **/
 
-#if ! __has_feature(objc_arc)
-#warning This file must be compiled with ARC. Use -fobjc-arc flag (or convert project to ARC).
-#endif
 
 @interface DDLoggingContextSet : NSObject
 
@@ -42,6 +39,13 @@
         contextSet = [[DDLoggingContextSet alloc] init];
     }
     return self;
+}
+
+
+- (void) dealloc
+{
+   [contextSet release];
+   [super dealloc];
 }
 
 
@@ -93,6 +97,11 @@
     return self;
 }
 
+- (void) dealloc
+{
+   [contextSet release];
+   [super dealloc];
+}
 
 - (void)addToBlacklist:(int)loggingContext
 {
@@ -141,6 +150,13 @@
         set = [[NSMutableSet alloc] init];
     }
     return self;
+}
+
+
+- (void) dealloc
+{
+   [set release];
+   [super dealloc];
 }
 
 
