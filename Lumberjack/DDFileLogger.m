@@ -1098,6 +1098,17 @@ static int exception_count = 0;
     return self;
 }
 
+- (void) dealloc
+{
+   [fileAttributes release];
+   [filePath release];
+   [fileName release];
+   [modificationDate release];
+   [creationDate release];
+   [creationDate release];
+   
+   [super dealloc];
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark Standard Info
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1106,7 +1117,7 @@ static int exception_count = 0;
 {
     if (fileAttributes == nil)
     {
-        fileAttributes = [[NSFileManager defaultManager] attributesOfItemAtPath:filePath error:nil];
+        fileAttributes = [[[NSFileManager defaultManager] attributesOfItemAtPath:filePath error:nil] copy];
     }
     return fileAttributes;
 }
@@ -1115,7 +1126,7 @@ static int exception_count = 0;
 {
     if (fileName == nil)
     {
-        fileName = [filePath lastPathComponent];
+        fileName = [[filePath lastPathComponent] copy];
     }
     return fileName;
 }
@@ -1124,7 +1135,7 @@ static int exception_count = 0;
 {
     if (modificationDate == nil)
     {
-        modificationDate = [[self fileAttributes] objectForKey:NSFileModificationDate];
+        modificationDate = [[[self fileAttributes] objectForKey:NSFileModificationDate] copy];
     }
     
     return modificationDate;
@@ -1134,7 +1145,7 @@ static int exception_count = 0;
 {
     if (creationDate == nil)
     {
-        creationDate = [[self fileAttributes] objectForKey:NSFileCreationDate];
+        creationDate = [[[self fileAttributes] objectForKey:NSFileCreationDate] copy];
     }
     return creationDate;
 }
@@ -1216,8 +1227,13 @@ static int exception_count = 0;
 #pragma mark Changes
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-- (void)reset
+- (void) reset
 {
+   [fileName autorelease];
+   [fileAttributes autorelease];
+   [modificationDate autorelease];
+   [creationDate autorelease];
+   
     fileName = nil;
     fileAttributes = nil;
     creationDate = nil;
@@ -1242,8 +1258,9 @@ static int exception_count = 0;
         {
             NSLogError(@"DDLogFileInfo: Error renaming file (%@): %@", self.fileName, error);
         }
-        
-        filePath = newFilePath;
+       
+       [filePath autorelease];
+        filePath = [newFilePath copy];
         [self reset];
     }
 }
