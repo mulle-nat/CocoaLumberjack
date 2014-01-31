@@ -1105,7 +1105,6 @@ static int exception_count = 0;
    [fileName release];
    [modificationDate release];
    [creationDate release];
-   [creationDate release];
    
    [super dealloc];
 }

@@ -304,8 +304,8 @@ static unsigned int numProcessors;
     {
         va_start(args, format);
         
-        NSString *logMsg = [[[NSString alloc] initWithFormat:format arguments:args] autorelease];
-        DDLogMessage *logMessage = [[[DDLogMessage alloc] initWithLogMsg:logMsg
+        NSString *logMsg = [[NSString alloc] initWithFormat:format arguments:args];
+       DDLogMessage *logMessage = [[[DDLogMessage alloc] initWithLogMsg:logMsg
                                                                   level:level
                                                                    flag:flag
                                                                 context:context
@@ -314,9 +314,10 @@ static unsigned int numProcessors;
                                                                    line:line
                                                                     tag:tag
                                                                 options:0] autorelease];
-        
+        [logMsg release];
+                                    
         [self queueLogMessage:logMessage asynchronously:asynchronous];
-        
+       
         va_end(args);
     }
 }
@@ -334,8 +335,8 @@ static unsigned int numProcessors;
 {
     if (format)
     {
-        NSString *logMsg = [[[NSString alloc] initWithFormat:format arguments:args] autorelease];
-        DDLogMessage *logMessage = [[[DDLogMessage alloc] initWithLogMsg:logMsg
+        NSString *logMsg = [[NSString alloc] initWithFormat:format arguments:args];
+       DDLogMessage *logMessage = [[[DDLogMessage alloc] initWithLogMsg:logMsg
                                                                   level:level
                                                                    flag:flag
                                                                 context:context
@@ -344,7 +345,7 @@ static unsigned int numProcessors;
                                                                    line:line
                                                                     tag:tag
                                                                 options:0] autorelease];
-        
+        [logMsg release];
         [self queueLogMessage:logMessage asynchronously:asynchronous];
     }
 }
@@ -890,8 +891,7 @@ static char *dd_str_copy(const char *str)
         else
             function = (char *)aFunction;
         
-        timestamp = [[NSDate alloc] init];
-        
+        timestamp    = [NSDate new];
         machThreadID = pthread_mach_thread_np(pthread_self());
 
         // Try to get the current queue's label
@@ -941,7 +941,7 @@ static char *dd_str_copy(const char *str)
             queueLabel = dd_str_copy(""); // iOS 6.x only
         }
         
-        threadName = [[NSThread currentThread] name];
+        threadName = [[[NSThread currentThread] name] copy];
     }
     return self;
 }
@@ -975,6 +975,9 @@ static char *dd_str_copy(const char *str)
     if (queueLabel)
         free(queueLabel);
    [logMsg release];
+   [timestamp release];
+   [threadName release];
+   
    [super dealloc];
 }
 
@@ -985,8 +988,8 @@ static char *dd_str_copy(const char *str)
     newMessage->logLevel = self->logLevel;
     newMessage->logFlag = self->logFlag;
     newMessage->logContext = self->logContext;
-    newMessage->logMsg = self->logMsg;
-    newMessage->timestamp = self->timestamp;
+    newMessage->logMsg = [self->logMsg copy];
+    newMessage->timestamp = [self->timestamp copy];
     
     if (self->options & DDLogMessageCopyFile) {
         newMessage->file = dd_str_copy(self->file);
@@ -1000,7 +1003,7 @@ static char *dd_str_copy(const char *str)
     
     newMessage->machThreadID = self->machThreadID;
     newMessage->queueLabel = dd_str_copy(self->queueLabel);
-    newMessage->threadName = self->threadName;
+    newMessage->threadName = [self->threadName copy];
     newMessage->tag = self->tag;
     newMessage->options = self->options;
     
@@ -1058,6 +1061,7 @@ static char *dd_str_copy(const char *str)
     #if !OS_OBJECT_USE_OBJC
     if (loggerQueue) dispatch_release(loggerQueue);
     #endif
+   [formatter release];
    [super dealloc];
 }
 
@@ -1148,8 +1152,9 @@ static char *dd_str_copy(const char *str)
             if ([formatter respondsToSelector:@selector(willRemoveFromLogger:)]) {
                 [formatter willRemoveFromLogger:self];
             }
-            
-            formatter = logFormatter;
+           
+            [formatter autorelease];
+            formatter = [logFormatter retain];
             
             if ([formatter respondsToSelector:@selector(didAddToLogger:)]) {
                 [formatter didAddToLogger:self];
