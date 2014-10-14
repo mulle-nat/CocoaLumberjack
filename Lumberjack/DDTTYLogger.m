@@ -1239,7 +1239,7 @@ static DDTTYLogger *sharedInstance;
         BOOL logMsgEnc = [logMsg getCString:msg maxLength:(msgLen + 1) encoding:NSUTF8StringEncoding];
         if (!logMsgEnc)
         {
-            if (!useStack && msg != NULL) free(msg);
+            if (!useStack) free(msg);
             return;
         }
         

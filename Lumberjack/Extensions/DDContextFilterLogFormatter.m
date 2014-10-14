@@ -193,7 +193,7 @@
 
 - (BOOL)isInSet:(int)loggingContext
 {
-    BOOL result = NO;
+    BOOL result;
     
     OSSpinLockLock(&lock);
     {

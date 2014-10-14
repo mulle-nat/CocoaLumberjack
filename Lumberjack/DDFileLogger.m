@@ -522,7 +522,7 @@ BOOL doesAppRunInBackground(void);
     {
         if (aDateFormatter)
         {
-            dateFormatter = aDateFormatter;
+            dateFormatter = [aDateFormatter retain];
         }
         else
         {
@@ -533,6 +533,14 @@ BOOL doesAppRunInBackground(void);
     }
     return self;
 }
+
+
+- (void) dealloc
+{
+    [dateFormatter release];
+    [super dealloc];
+}
+
 
 - (NSString *)formatLogMessage:(DDLogMessage *)logMessage
 {
@@ -574,6 +582,8 @@ BOOL doesAppRunInBackground(void);
 {
     [currentLogFileHandle synchronizeFile];
     [currentLogFileHandle closeFile];
+    [currentLogFileHandle release];
+    [currentLogFileInfo release];
 
     if (currentLogFileVnode) {
         dispatch_source_cancel(currentLogFileVnode);

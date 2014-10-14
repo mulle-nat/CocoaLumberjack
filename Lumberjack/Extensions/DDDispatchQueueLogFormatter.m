@@ -119,7 +119,7 @@ static NSDateFormatter NS_RETURNS_RETAINED  *newDDDateFormatter( NSString *forma
         // Single-threaded mode.
         
         if (threadUnsafeDateFormatter == nil)
-           threadUnsafeDateFormatter = newDDDateFormatter( [isa dateFormatString]);
+           threadUnsafeDateFormatter = newDDDateFormatter( [[self class] dateFormatString]);
        dateFormatter = threadUnsafeDateFormatter;
     }
     else
@@ -134,7 +134,7 @@ static NSDateFormatter NS_RETURNS_RETAINED  *newDDDateFormatter( NSString *forma
         dateFormatter = threadDictionary[ key];
         if (dateFormatter == nil)
         {
-            dateFormatter = newDDDateFormatter( [isa dateFormatString]);
+            dateFormatter = newDDDateFormatter( [[self class] dateFormatString]);
             threadDictionary[key] = dateFormatter;
             [dateFormatter autorelease];
         }
